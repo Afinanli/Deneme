@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Futbolcu Tahmin Oyunu</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        <h1>Futbolcu Tahmin Et</h1>
+        <p>Günün gizli futbolcusunu bul! (Uyruk, Lig, Takım, Mevki, Yaş)</p>
+
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Bir futbolcu adı yazın...">
+            <button id="guessBtn">Tahmin Et</button>
+            <div id="suggestions"></div>
+        </div>
+
+        <!-- Tahminlerin ekleneceği başlıklar ve alan -->
+        <div class="grid-header">
+            <div>Oyuncu</div>
+            <div>Uyruk</div>
+            <div>Lig</div>
+            <div>Takım</div>
+            <div>Mevki</div>
+            <div>Yaş</div>
+        </div>
+        <div id="guessesContainer"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
