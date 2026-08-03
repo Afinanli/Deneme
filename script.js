@@ -1,22 +1,33 @@
 const searchInput = document.getElementById('searchInput');
 const guessBtn = document.getElementById('guessBtn');
 const guessesContainer = document.getElementById('guessesContainer');
+const suggestionsBox = document.getElementById('suggestions');
 
 // SENİN SOFASCORE API BİLGİLERİN
 const API_KEY = '753d1ad74emsh107065bce84f45bp1970bbjsn24d5c1bcb4bd';
 const API_HOST = 'sofasport.p.rapidapi.com';
 
-// Günün Gizli Futbolcusu (Örn: Mauro Icardi)
-const gizliFutbolcu = {
-    isim: "Mauro Icardi",
-    uyruk: "Argentina",
-    takim: "Galatasaray",
-    mevki: "Forward"
+// Günün Gizli Futbolcusu (Örn: Rastgele bir oyuncu ID'si ile veya sabit bir test oyuncusu)
+// Şimdilik sistemin çalışmasını test etmek için gizli oyuncuyu sabitliyoruz, 
+// sonra bunu API'den rastgele çektirebiliriz.
+let gizliFutbolcu = {
+    id: 12994, // Örnek ID (Örn: Asensio veya benzeri)
+    isim: "Marco Asensio",
+    uyruk: "Spain",
+    takim: "Fenerbahçe",
+    mevki: "Midfielder"
 };
 
-// 1. Oyuncu ismini API'de aratıp ID'sini bulan fonksiyon
-async function oyuncuAra(isim) {
-    const url = `https://sofasport.p.rapidapi.com/v1/players/search?q=${encodeURIComponent(isim)}`;
+let secilenOyuncuId = null;
+
+// 1. Kullanıcı yazdıkça Sofasport API'sinden canlı oyuncu listesi getiren fonksiyon
+searchInput.addEventListener('input', async () => {
+    let query = searchInput.value.trim();
+    suggestionsBox.innerHTML = '';
+
+    if (query.length < 2) return; // En az 2 harf yazınca arasın
+
+    const url = `https://sofasport.p.rapidapi.com/v1/players/search?q=${encodeURIComponent(query)}`;
     const options = {
         method: 'GET',
         headers: {
@@ -28,85 +39,84 @@ async function oyuncuAra(isim) {
     try {
         const response = await fetch(url, options);
         const data = await response.json();
-        
-        if (data && data.results && data.results.length > 0) {
-            return data.results[0].player.id;
+
+        if (data && data.results) {
+            // API'den gelen sonuçları altta listeleyelim
+            data.results.forEach(item => {
+                let p = item.player;
+                const div = document.createElement('div');
+                div.className = 'suggestion-item';
+                div.innerText = `${p.name} (${p.team ? p.team.name : 'Takımsız'})`;
+                
+                // Listeden bir oyuncuya tıkladığında
+                div.addEventListener('click', () => {
+                    searchInput.value = p.name;
+                    secilenOyuncuId = p.id; // Seçilen oyuncunun ID'sini hafızaya alıyoruz
+                    suggestionsBox.innerHTML = '';
+                });
+
+                suggestionsBox.appendChild(div);
+            });
         }
-        return null;
     } catch (error) {
-        console.error("Arama Hatası:", error);
-        return null;
+        console.error("Canlı arama hatası:", error);
     }
-}
+});
 
-// 2. Oyuncu ID'si ile detaylı verilerini çeken fonksiyon
-async function oyuncuDetayiCek(playerId) {
-    const url = `https://sofasport.p.rapidapi.com/v1/players/data?player_id=${playerId}`;
-    const options = {
-        method: 'GET',
-        headers: {
-            'x-rapidapi-host': API_HOST,
-            'x-rapidapi-key': API_KEY
-        }
-    };
-
-    try {
-        const response = await fetch(url, options);
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error("Detay Çekme Hatası:", error);
-        return null;
-    }
-}
-
-// Tahmin Et butonuna basıldığında
+// 2. Tahmin Et butonuna basıldığında seçilen oyuncunun detayını çek ve kıyasla
 guessBtn.addEventListener('click', async () => {
-    let girilenIsim = searchInput.value.trim();
-    if (!girilenIsim) {
-        alert("Lütfen bir futbolcu adı yazın!");
+    if (!secilenOyuncuId) {
+        alert("Lütfen alttaki listeden bir oyuncu seçin!");
         return;
     }
 
-    guessBtn.innerText = "Aranıyor...";
-    
-    // İsmi API'de aratıp ID alıyoruz
-    let playerId = await oyuncuAra(girilenIsim);
-    
-    if (!playerId) {
-        alert("Böyle bir futbolcu bulunamadı! İsmi İngilizce karakterlerle veya tam yazmayı dene.");
+    guessBtn.innerText = "Kontrol ediliyor...";
+
+    const url = `https://sofasport.p.rapidapi.com/v1/players/data?player_id=${secilenOyuncuId}`;
+    const options = {
+        method: 'GET',
+        headers: {
+            'x-rapidapi-host': API_HOST,
+            'x-rapidapi-key': API_KEY
+        }
+    };
+
+    try {
+        const response = await fetch(url, options);
+        const data = await response.json();
         guessBtn.innerText = "Tahmin Et";
-        return;
+
+        if (!data || !data.player) {
+            alert("Oyuncu bilgileri alınamadı.");
+            return;
+        }
+
+        let p = data.player;
+        let gelenIsim = p.name;
+        let gelenUyruk = p.country ? p.country.name : "Bilinmiyor";
+        let gelenTakim = p.team ? p.team.name : "Bilinmiyor";
+        let gelenMevki = p.position || "Bilinmiyor";
+
+        // Gizli futbolcu ile kıyaslama
+        let uyrukDurum = gelenUyruk.toLowerCase() === gizliFutbolcu.uyruk.toLowerCase() ? 'green' : 'red';
+        let takimDurum = gelenTakim.toLowerCase() === gizliFutbolcu.takim.toLowerCase() ? 'green' : 'red';
+        let mevkiDurum = gelenMevki.toLowerCase() === gizliFutbolcu.mevki.toLowerCase() ? 'green' : 'red';
+
+        // Ekrana yazdır
+        createGuessRow(gelenIsim, uyrukDurum, 'red', takimDurum, mevkiDurum, 'red');
+
+        // Sıfırla
+        searchInput.value = '';
+        secilenOyuncuId = null;
+
+        if (gelenIsim.toLowerCase() === gizliFutbolcu.isim.toLowerCase()) {
+            setTimeout(() => alert("Tebrikler! Gizli futbolcuyu bildin! 🎉"), 100);
+        }
+
+    } catch (error) {
+        guessBtn.innerText = "Tahmin Et";
+        console.error("Detay çekme hatası:", error);
     }
-
-    // Bulunan ID ile oyuncunun gerçek verilerini çekiyoruz
-    let playerData = await oyuncuDetayiCek(playerId);
-    guessBtn.innerText = "Tahmin Et";
-
-    if (!playerData || !playerData.player) {
-        alert("Oyuncu verileri alınamadı.");
-        return;
-    }
-
-    let p = playerData.player;
-    let gelenIsim = p.name || girilenIsim;
-    let gelenUyruk = p.country ? p.country.name : "Bilinmiyor";
-    let gelenTakim = p.team ? p.team.name : "Bilinmiyor";
-    let gelenMevki = p.position || "Bilinmiyor";
-
-    // Gizli futbolcu ile kıyaslama
-    let uyrukDurum = gelenUyruk.toLowerCase() === gizliFutbolcu.uyruk.toLowerCase() ? 'green' : 'red';
-    let takimDurum = gelenTakim.toLowerCase() === gizliFutbolcu.takim.toLowerCase() ? 'green' : 'red';
-    let mevkiDurum = gelenMevki.toLowerCase() === gizliFutbolcu.mevki.toLowerCase() ? 'green' : 'red';
-
-    // Arayüze gerçek API verileriyle satırı ekle
-    createGuessRow(gelenIsim, uyrukDurum, 'red', takimDurum, mevkiDurum, 'red');
-
-    if (gelenIsim.toLowerCase() === gizliFutbolcu.isim.toLowerCase()) {
-        setTimeout(() => alert("Tebrikler! Gizli futbolcuyu bildin! 🎉"), 100);
-    }
-
-    searchInput.value = "";
 });
 
 function createGuessRow(name, uyruk, lig, takim, mevki, yas) {
