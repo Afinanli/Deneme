@@ -6,7 +6,7 @@ const guessesContainer = document.getElementById('guessesContainer');
 const API_KEY = '753d1ad74emsh107065bce84f45bp1970bbjsn24d5c1bcb4bd';
 const API_HOST = 'sofasport.p.rapidapi.com';
 
-// Günün Gizli Futbolcusu (Örn: Mauro Icardi - API'deki verilerine göre)
+// Günün Gizli Futbolcusu (Örn: Mauro Icardi)
 const gizliFutbolcu = {
     isim: "Mauro Icardi",
     uyruk: "Argentina",
@@ -29,7 +29,6 @@ async function oyuncuAra(isim) {
         const response = await fetch(url, options);
         const data = await response.json();
         
-        // Eğer aranan isim bulunduysa ilk eşleşen oyuncunun ID'sini döndür
         if (data && data.results && data.results.length > 0) {
             return data.results[0].player.id;
         }
@@ -71,7 +70,7 @@ guessBtn.addEventListener('click', async () => {
 
     guessBtn.innerText = "Aranıyor...";
     
-    // Önce ismi API'de aratıp ID alıyoruz
+    // İsmi API'de aratıp ID alıyoruz
     let playerId = await oyuncuAra(girilenIsim);
     
     if (!playerId) {
@@ -95,15 +94,14 @@ guessBtn.addEventListener('click', async () => {
     let gelenTakim = p.team ? p.team.name : "Bilinmiyor";
     let gelenMevki = p.position || "Bilinmiyor";
 
-    // Gizli futbolcu ile kıyaslama (Doğruysa yeşil, yanlışsa kırmızı)
+    // Gizli futbolcu ile kıyaslama
     let uyrukDurum = gelenUyruk.toLowerCase() === gizliFutbolcu.uyruk.toLowerCase() ? 'green' : 'red';
     let takimDurum = gelenTakim.toLowerCase() === gizliFutbolcu.takim.toLowerCase() ? 'green' : 'red';
     let mevkiDurum = gelenMevki.toLowerCase() === gizliFutbolcu.mevki.toLowerCase() ? 'green' : 'red';
 
-    // Arayüze satırı ekle (Lig ve Yaş alanlarını da API verine göre genişletebiliriz)
+    // Arayüze gerçek API verileriyle satırı ekle
     createGuessRow(gelenIsim, uyrukDurum, 'red', takimDurum, mevkiDurum, 'red');
 
-    // Bildiyse tebrik et
     if (gelenIsim.toLowerCase() === gizliFutbolcu.isim.toLowerCase()) {
         setTimeout(() => alert("Tebrikler! Gizli futbolcuyu bildin! 🎉"), 100);
     }
@@ -126,4 +124,3 @@ function createGuessRow(name, uyruk, lig, takim, mevki, yas) {
 
     guessesContainer.prepend(row);
 }
-
